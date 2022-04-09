@@ -3,12 +3,16 @@ from parsel import Selector
 import aria2p
 import time
 
-download_path = 'D:\\chia\\plotdl'
 max_concurrent_downloads = 1
 max_connections_per_file = 5
 
+download_paths = [
+    'D:\\chia\\portable-plots',
+    'E:\\chia\\portable-plots',
+]
+
 plot_manager_urls = [
-    'http://example.ingress.sfo.computer',
+    'http://0liep5iehhcrl3rnfqmbg60q5s.ingress.sfo.computer',
 ]
 
 # initialization, these are the default values
@@ -78,7 +82,7 @@ def check_files(plot_manager_files):
         if not already_added:
             print(f'Adding {filename} to downloads')
             aria2.add(link, options={
-                'dir': download_path,
+                'dir': get_next_download_path(),
                 'split': str(max_connections_per_file),
                 'max-connection-per-server': '10'})
         else:
@@ -122,7 +126,18 @@ def check_files(plot_manager_files):
             aria2.remove([download])
         print('-------------------------------------------------')
 
-        
-    
+next_download_path_index = 0
+
+def get_next_download_path():    
+    global next_download_path_index
+
+    download_path = download_paths[next_download_path_index]
+
+    next_download_path_index += 1
+
+    if next_download_path_index >= len(download_paths): next_download_path_index = 0
+
+    return download_path
+
 
 main()
