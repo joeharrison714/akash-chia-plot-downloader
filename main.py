@@ -2,9 +2,11 @@ import requests as req
 from parsel import Selector
 import aria2p
 import time
+from urllib.parse import urlparse
 
-max_concurrent_downloads = 1
+max_concurrent_downloads = 2
 max_connections_per_file = 5
+max_same_server = 1
 
 download_paths = [
     'D:\\chia\\portable-plots',
@@ -12,7 +14,7 @@ download_paths = [
 ]
 
 plot_manager_urls = [
-    'http://0liep5iehhcrl3rnfqmbg60q5s.ingress.sfo.computer',
+    'http://example.ingress.sfo.computer',
 ]
 
 # initialization, these are the default values
@@ -29,18 +31,24 @@ def main():
     #print(aria2.get_global_options())
 
     aria2.set_global_options(options={
-        'max-concurrent-downloads': str(max_concurrent_downloads)
+        'max-concurrent-downloads': str(max_concurrent_downloads),
     })
     try:
         while True:
-            plot_manager_files = []
-            for url in plot_manager_urls:
-                plot_manager_files.extend(get_plot_manager_files(url))
-            
-            s_s = '' if len(plot_manager_files) == 1 else 's'
-            print(f'Got {len(plot_manager_files)} file{s_s} from plotmanager')
+            try:
+                plot_manager_files = []
+                for url in plot_manager_urls:
+                    try:
+                        plot_manager_files.extend(get_plot_manager_files(url))
+                    except:
+                        print(f'Error getting plots from: {url}')
+                
+                s_s = '' if len(plot_manager_files) == 1 else 's'
+                print(f'Got {len(plot_manager_files)} file{s_s} from plotmanager')
 
-            check_files(plot_manager_files)
+                check_files(plot_manager_files)
+            except:
+                print('Error in main loop')
 
             print('Sleeping...')
             time.sleep(60)
@@ -65,6 +73,15 @@ def check_files(plot_manager_files):
 
     downloads = aria2.get_downloads()
 
+    downloads_by_host = {}
+    for download in downloads:
+        download_url = download.files[0].uris[0]["uri"]
+        url_info = urlparse(download_url)
+        host = url_info.hostname
+
+        if not host in downloads_by_host:
+            downloads_by_host[host] = 0
+        downloads_by_host[host] += 1
 
     print('')
     print('Plot Manager Files')
@@ -78,15 +95,25 @@ def check_files(plot_manager_files):
             if download.name == filename:
                 already_added = True
                 break
-        
-        if not already_added:
-            print(f'Adding {filename} to downloads')
-            aria2.add(link, options={
-                'dir': get_next_download_path(),
-                'split': str(max_connections_per_file),
-                'max-connection-per-server': '10'})
-        else:
+
+        if already_added:
             print(f'File has already been added')
+            continue
+        
+        url_info = urlparse(link)
+        host = url_info.hostname
+
+        if host in downloads_by_host:
+            cur = downloads_by_host[host]
+            if cur >= max_same_server:
+                print(f'Waiting to add due to {cur} in-progress downloads from same server')
+                continue
+
+        print(f'Adding {filename} to downloads')
+        aria2.add(link, options={
+            'dir': get_next_download_path(),
+            'split': str(max_connections_per_file),
+            'max-connection-per-server': '10'})
 
 
 
@@ -98,6 +125,10 @@ def check_files(plot_manager_files):
     for download in downloads:
         print(f'{download.gid}  {download.status}  {download.progress_string()}  {download.eta_string()}')
         print(f'NAME: {download.name}')
+        print(f'DIR: {download.dir}')
+
+        url = download.files[0].uris[0]["uri"]
+        print(f'URL: {url}')
 
         if download.status == 'complete':
 
