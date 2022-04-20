@@ -11,6 +11,8 @@ This is a script that will automatically download plots from the Akash "Chia Plo
 |download_paths|The local paths to download the plots to. If multiple are provided they will be used in a round-robin fashion.
 |plot_manager_urls|The urls of the plot manager interface|
 
+## Planned Enhancements
+- Select download destination based on amount of free space
 
 ## Setup
 1. Create venv: `python -m venv venv`
