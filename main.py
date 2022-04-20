@@ -17,6 +17,9 @@ plot_manager_urls = [
     'http://example.ingress.sfo.computer',
 ]
 
+# if set to false, won't actually add any new files to download to aria. Used in rare situations.
+add_new = True
+
 # initialization, these are the default values
 aria2 = aria2p.API(
     aria2p.Client(
@@ -112,11 +115,14 @@ def check_files(plot_manager_files):
                 print(f'Waiting to add due to {cur} in-progress downloads from same server')
                 continue
 
-        print(f'Adding {filename} to downloads')
-        aria2.add(link, options={
-            'dir': get_next_download_path(),
-            'split': str(max_connections_per_file),
-            'max-connection-per-server': '10'})
+        if add_new:
+            print(f'Adding {filename} to downloads')
+            aria2.add(link, options={
+                'dir': get_next_download_path(),
+                'split': str(max_connections_per_file),
+                'max-connection-per-server': '10'})
+        else:
+            print(f'Skipping add of {filename} due to add new being turned off')
 
 
 
