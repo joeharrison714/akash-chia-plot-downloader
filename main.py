@@ -72,6 +72,9 @@ def get_plot_manager_files(url):
         if link.endswith('.log'):
             print(f'Skipping {link}')
             continue
+        if link.endswith('.plot.tmp'):
+            print(f'Skipping {link}')
+            continue
         direct_urls.append(link)
     return direct_urls
 
